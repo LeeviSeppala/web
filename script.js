@@ -1,70 +1,59 @@
-const questions = [
-    {
-        question: "What is the capital of France?",
-        options: ["Paris", "London", "Berlin", "Madrid"],
-        answer: "Paris"
-    },
-    {
-        question: "Which planet is known as the Red Planet?",
-        options: ["Earth", "Mars", "Venus", "Jupiter"],
-        answer: "Mars"
-    },
-    {
-        question: "What is the largest mammal?",
-        options: ["Elephant", "Blue Whale", "Giraffe", "Lion"],
-        answer: "Blue Whale"
-    },
-    {
-        question: "What is the powerhouse of the cell?",
-        options: ["Mitochondria", "Nucleus", "Ribosome", "Vacuole"],
-        answer: "Mitochondria"
-    },
-    {
-        question: "Who wrote 'Romeo and Juliet'?",
-        options: ["William Shakespeare", "Charles Dickens", "Jane Austen", "Mark Twain"],
-        answer: "William Shakespeare"
-    }
-];
-
-let currentQuestionIndex = 0;
-let score = 0;
-
-const questionText = document.getElementById("question-text");
-const optionButtons = document.querySelectorAll(".options button");
+const quizContainer = document.querySelector(".quiz-container");
 const resultText = document.getElementById("result-text");
+const optionButtons = document.querySelectorAll(".options button");
 
-function showQuestion(question) {
-    questionText.textContent = question.question;
+let score = 0;
+let currentQuestion = 0;
+let questions; // Variable to store fetched questions
+
+async function fetchQuizData() {
+  try {
+    const response = await fetch("questions.json");
+    if (!response.ok) {
+      throw new Error("Failed to fetch quiz data.");
+    }
+    questions = await response.json();
+  } catch (error) {
+    console.error(error);
+    questions = [];
+  }
+}
+
+async function buildQuiz() {
+  if (!questions) {
+    await fetchQuizData();
+  }
+
+  if (currentQuestion < 5 && currentQuestion < questions.length) {
+    const question = questions[currentQuestion];
+    const questionText = document.getElementById("question-text");
+    questionText.textContent = `Question ${currentQuestion + 1}/${5}: ${question.question}`;
+
     optionButtons.forEach((button, index) => {
-        button.textContent = question.options[index];
+      button.textContent = question.options[index];
+      button.disabled = false; // Re-enable the button
+      button.removeEventListener("click", handleAnswer); // Remove previous event listener
+      button.addEventListener("click", handleAnswer);
     });
+  } else if (currentQuestion === 5) {
+    showResults();
+  }
 }
 
-function checkAnswer(selectedOption) {
-    if (selectedOption === questions[currentQuestionIndex].answer) {
-        score++;
-        resultText.textContent = "Correct!";
-    } else {
-        resultText.textContent = "Wrong. The correct answer is: " + questions[currentQuestionIndex].answer;
-    }
-    currentQuestionIndex++;
-    if (currentQuestionIndex < questions.length) {
-        showQuestion(questions[currentQuestionIndex]);
-    } else {
-        showResult();
-    }
+function handleAnswer() {
+  const selectedOption = this.textContent;
+  const correctAnswer = questions[currentQuestion].answer;
+
+  if (selectedOption === correctAnswer) {
+    score++;
+  }
+
+  currentQuestion++;
+  buildQuiz();
 }
 
-function showResult() {
-    questionText.textContent = "Quiz Completed!";
-    resultText.textContent = "Your Score: " + score + " out of " + questions.length;
-    optionButtons.forEach((button) => {
-        button.style.display = "none";
-    });
+function showResults() {
+  resultText.textContent = `You scored ${score} out of 5 questions!`;
 }
 
-showQuestion(questions[currentQuestionIndex]);
-
-optionButtons.forEach((button) => {
-    button.addEventListener("click", () => checkAnswer(button.textContent));
-});
+buildQuiz();
